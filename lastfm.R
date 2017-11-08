@@ -16,10 +16,10 @@ lastfm_export <- function(user, timezone = "") {
   rawdata <- vector()
   page_check <- xmlTreeParse(sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&api_key=9b5e3d77309d540e9687909aabd9d467", user), useInternal = TRUE)
   r <- xmlRoot(page_check)
-  pages <- as.numeric(xmlAttrs(r[[1]])[4])
-  total <- as.numeric(xmlAttrs(r[[1]])[5])
-  lastp <- total - ((pages - 1) * 1000) #no of loops for the last page
-  for (j in 1:(pages-1)) { #last page requires different treatment
+  pages <- as.numeric(xmlAttrs(r[[1]])[4]) #data is stored on multiple pages with an unique url; 1000 scrobbles on each page except the last one
+  total <- as.numeric(xmlAttrs(r[[1]])[5]) #total number of scrobbles
+  lastp <- total - ((pages - 1) * 1000) #no of scrobbles to be fetched from the last page
+  for (j in 1:(pages-1)) { #last page requires a different treatment
     url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, j)
     dl <- xmlTreeParse(url, useInternal = TRUE)
     r <- xmlRoot(dl)
@@ -60,7 +60,7 @@ lastfm_export <- function(user, timezone = "") {
   lastfm$fulldate <- as.character(lastfm$fulldate)
   class(lastfm$fulldate) <- c("POSIXt", "POSIXct")
   attr(lastfm$fulldate, "tzone") <- timezone
-  raw_time <- substr(as.character(lastfm$fulldate), 12, 19)
+  raw_time <- substr(as.character(lastfm$fulldate), 12, 19) #extracts time information from the full date
   raw_time <- strptime(raw_time, format="%H:%M:%S")
   lastfm$time <- raw_time
   weekday <- sapply(lastfm$fulldate, weekdays)
