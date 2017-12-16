@@ -19,23 +19,25 @@ lastfm_export <- function(user, timezone = "") {
   pages <- as.numeric(xmlAttrs(r[[1]])[4]) #data is stored on multiple pages with an unique url; 1000 scrobbles on each page except the last one
   total <- as.numeric(xmlAttrs(r[[1]])[5]) #total number of scrobbles
   lastp <- total - ((pages - 1) * 1000) #no of scrobbles to be fetched from the last page
-  for (j in 1:(pages-1)) { #last page requires a different treatment
-    url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, j)
-    dl <- xmlTreeParse(url, useInternal = TRUE)
-    r <- xmlRoot(dl)
-    for (i in 1:1000) {
-      if (length(as.character(xmlAttrs(r[[1]][[i]])[1])) == 0) {
-        date <- as.character(xmlApply(r[[1]][[i]], xmlAttrs)$date)
-        artist <- xmlValue(r[[1]][[i]][1]$artist)
-        track <- xmlValue(r[[1]][[i]][2]$name)
-        album <- xmlValue(r[[1]][[i]][5]$album)
-        if (date != "0"){ #all scrobbles with missing date and time are discarded
-          add <- c(artist, track, album, date)
-          rawdata <- rbind(rawdata, add)
+  if (pages>1){ # if pages==1 no need to process previous pages
+    for (j in 1:(pages-1)) { #last page requires a different treatment
+      url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, j)
+      dl <- xmlTreeParse(url, useInternal = TRUE)
+      r <- xmlRoot(dl)
+      for (i in 1:1000) {
+        if (length(as.character(xmlAttrs(r[[1]][[i]])[1])) == 0) {
+          date <- as.character(xmlApply(r[[1]][[i]], xmlAttrs)$date)
+          artist <- xmlValue(r[[1]][[i]][1]$artist)
+          track <- xmlValue(r[[1]][[i]][2]$name)
+          album <- xmlValue(r[[1]][[i]][5]$album)
+          if (date != "0"){ #all scrobbles with missing date and time are discarded
+            add <- c(artist, track, album, date)
+            rawdata <- rbind(rawdata, add)
+          }
         }
       }
+      print(sprintf("Page %s out of %s downloaded", j, pages))
     }
-    print(sprintf("Page %s out of %s downloaded", j, pages))
   }
   #last page treatment
   url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, pages)
