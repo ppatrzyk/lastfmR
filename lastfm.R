@@ -7,66 +7,119 @@
 # 3. Depending on the size of your Last.fm library, downloading might take a while
 #
 lastfm_export <- function(user, timezone = "") {
+  
+  #load required packages
+  if("XML" %in% rownames(installed.packages()) == FALSE) {
+    install.packages("XML")
+  }
+  
+  if("data.table" %in% rownames(installed.packages()) == FALSE) {
+    install.packages("data.table")
+  }
+  
   if(require("XML")){
     print("XML loaded")
   } else {
-    print("install XML package and run again")
+    print("Failed to load XML package")
     return(NULL)
   }
-  rawdata <- vector()
-  page_check <- xmlTreeParse(sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&api_key=9b5e3d77309d540e9687909aabd9d467", user), useInternal = TRUE)
-  r <- xmlRoot(page_check)
-  pages <- as.numeric(xmlAttrs(r[[1]])[4]) #data is stored on multiple pages with an unique url; 1000 scrobbles on each page except the last one
-  total <- as.numeric(xmlAttrs(r[[1]])[5]) #total number of scrobbles
-  lastp <- total - ((pages - 1) * 1000) #no of scrobbles to be fetched from the last page
-  if (pages>1){ # if pages==1 no need to process previous pages
-    for (j in 1:(pages-1)) { #last page requires a different treatment
-      url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, j)
-      dl <- xmlTreeParse(url, useInternal = TRUE)
-      r <- xmlRoot(dl)
-      for (i in 1:1000) {
-        if (length(as.character(xmlAttrs(r[[1]][[i]])[1])) == 0) {
-          date <- as.character(xmlApply(r[[1]][[i]], xmlAttrs)$date)
-          artist <- xmlValue(r[[1]][[i]][1]$artist)
-          track <- xmlValue(r[[1]][[i]][2]$name)
-          album <- xmlValue(r[[1]][[i]][5]$album)
-          if (date != "0"){ #all scrobbles with missing date and time are discarded
-            add <- c(artist, track, album, date)
-            rawdata <- rbind(rawdata, add)
-          }
-        }
-      }
-      print(sprintf("Page %s out of %s downloaded", j, pages))
-    }
+  
+  if(require("data.table")){
+    print("data.table loaded")
+  } else {
+    print("Failed to load data.table package")
+    return(NULL)
   }
-  #last page treatment
-  url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, pages)
-  dl <- xmlTreeParse(url, useInternal = TRUE)
-  r <- xmlRoot(dl)
-  for (i in 1:lastp) {
-    if (length(as.character(xmlAttrs(r[[1]][[i]])[1])) == 0) {
-      date <- as.character(xmlApply(r[[1]][[i]], xmlAttrs)$date)
-      artist <- xmlValue(r[[1]][[i]][1]$artist)
-      track <- xmlValue(r[[1]][[i]][2]$name)
-      album <- xmlValue(r[[1]][[i]][5]$album)
-      if (date != "0"){
-        add <- c(artist, track, album, date)
-        rawdata <- rbind(rawdata, add)
+  
+  #get number of pages
+  first_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&api_key=9b5e3d77309d540e9687909aabd9d467", user)
+  page_check <- xmlTreeParse(first_url, useInternal = TRUE)
+  current_node <- xmlRoot(page_check)
+  pages <- as.numeric(xmlAttrs(current_node[[1]])[4])
+  
+  #total number of scrobbles
+  #+20 to prevent out of range error (if the user is scrobbling right now, data grows during downloading)
+  total <- as.numeric(xmlAttrs(current_node[[1]])[5]) + 20
+  
+  #allocate data.table
+  lastfm <- data.table(
+    date = as.numeric(rep(NA_integer_, total)),
+    artist = as.character(rep(NA, total)),
+    track = as.character(rep(NA, total)),
+    album = as.character(rep(NA, total))
+  )
+  
+  for (i in 1:pages) {
+    
+    current_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, i)
+    parsed <- xmlTreeParse(current_url, useInternal = TRUE)
+    current_node <- xmlRoot(parsed)
+    
+    for (j in 1:1000) {
+      
+      #check if end of page is reached (last page has < 1000 entries)
+      if(is.na(xmlValue(current_node[[1]][[j]]))){
+        break
       }
+      
+      #row index in data.table
+      index <- as.integer(((i - 1) * 1000) + j)
+      
+      #set date
+      rawdate <- as.integer(xmlApply(current_node[[1]][[j]], xmlAttrs)$date)
+      if(length(rawdate) != 0){
+        # = the track is not played now
+        set(
+          lastfm, index, 1L,
+          rawdate
+        )
+      }
+      
+      #set artist
+      set(
+        lastfm, index, 2L,
+        xmlValue(current_node[[1]][[j]][1]$artist)
+      )
+
+      #set track
+      set(
+        lastfm, index, 3L,
+        xmlValue(current_node[[1]][[j]][2]$name)
+      )
+
+      #set album
+      set(
+        lastfm, index, 4L,
+        xmlValue(current_node[[1]][[j]][5]$album)
+      )
     }
+    print(paste(round(100 * i / pages, digits = 2), "% downloaded", sep = ""))
   }
-  print(sprintf("Page %s out of %s downloaded", pages, pages))
-  #reformat
-  lastfm <- as.data.frame(rawdata)
-  names(lastfm) <- c("artist", "track", "album", "fulldate")
-  lastfm$fulldate <- as.character(lastfm$fulldate)
-  class(lastfm$fulldate) <- c("POSIXt", "POSIXct")
-  attr(lastfm$fulldate, "tzone") <- timezone
-  raw_time <- substr(as.character(lastfm$fulldate), 12, 19) #extracts time information from the full date
-  raw_time <- strptime(raw_time, format="%H:%M:%S")
-  lastfm$time <- raw_time
-  weekday <- sapply(lastfm$fulldate, weekdays)
-  lastfm$weekday <- as.factor(weekday)
-  row.names(lastfm) <- 1:nrow(lastfm)
+  
+  #remove empty rows
+  empty_rows <- apply(lastfm, 1, function(x) all(is.na(x)))
+  lastfm <- lastfm[!empty_rows,]
+  
+  #handle missing values
+  missing_date <- which(lastfm$date == 0)
+  for(i in missing_date){
+    set(
+      lastfm, i, 1L,
+      NA_integer_
+    )
+  }
+  missing_album <- grep("^\\s*$", lastfm$album)
+  for(i in missing_album){
+    set(
+      lastfm, i, 4L,
+      NA
+    )
+  }
+  
+  #date formatting
+  class(lastfm$date) <- c("POSIXt", "POSIXct")
+  attr(lastfm$date, "tzone") <- timezone
+
   return(lastfm)
-}
+  }
+ 
