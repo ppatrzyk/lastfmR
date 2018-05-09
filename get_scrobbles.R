@@ -1,12 +1,12 @@
 # 
 # 1. Run this script to import the function to the environment
 # 
-# 2. The function returns a data.frame object; run the following line
-#    lastfm <- lastfm_export("enter_your_username")
+# 2. The function returns a data.table object; run the following line
+#    scrobbles <- get_scrobbles("enter_your_username")
 # 
 # 3. Depending on the size of your Last.fm library, downloading might take a while
 #
-lastfm_export <- function(user, timezone = "") {
+get_scrobbles <- function(user, timezone = "") {
   
   #load required packages
   if("XML" %in% rownames(installed.packages()) == FALSE) {
@@ -42,7 +42,7 @@ lastfm_export <- function(user, timezone = "") {
   total <- as.numeric(xmlAttrs(current_node[[1]])[5]) + 20
   
   #allocate data.table
-  lastfm <- data.table(
+  scrobbles <- data.table(
     date = as.numeric(rep(NA_integer_, total)),
     artist = as.character(rep(NA, total)),
     track = as.character(rep(NA, total)),
@@ -70,26 +70,26 @@ lastfm_export <- function(user, timezone = "") {
       if(length(rawdate) != 0){
         # = the track is not played now
         set(
-          lastfm, index, 1L,
+          scrobbles, index, 1L,
           rawdate
         )
       }
       
       #set artist
       set(
-        lastfm, index, 2L,
+        scrobbles, index, 2L,
         xmlValue(current_node[[1]][[j]][1]$artist)
       )
-
+      
       #set track
       set(
-        lastfm, index, 3L,
+        scrobbles, index, 3L,
         xmlValue(current_node[[1]][[j]][2]$name)
       )
-
+      
       #set album
       set(
-        lastfm, index, 4L,
+        scrobbles, index, 4L,
         xmlValue(current_node[[1]][[j]][5]$album)
       )
     }
@@ -97,29 +97,28 @@ lastfm_export <- function(user, timezone = "") {
   }
   
   #remove empty rows
-  empty_rows <- apply(lastfm, 1, function(x) all(is.na(x)))
-  lastfm <- lastfm[!empty_rows,]
+  empty_rows <- apply(scrobbles, 1, function(x) all(is.na(x)))
+  scrobbles <- scrobbles[!empty_rows,]
   
   #handle missing values
-  missing_date <- which(lastfm$date == 0)
+  missing_date <- which(scrobbles$date == 0)
   for(i in missing_date){
     set(
-      lastfm, i, 1L,
+      scrobbles, i, 1L,
       NA_integer_
     )
   }
-  missing_album <- grep("^\\s*$", lastfm$album)
+  missing_album <- grep("^\\s*$", scrobbles$album)
   for(i in missing_album){
     set(
-      lastfm, i, 4L,
+      scrobbles, i, 4L,
       NA
     )
   }
   
   #date formatting
-  class(lastfm$date) <- c("POSIXt", "POSIXct")
-  attr(lastfm$date, "tzone") <- timezone
-
-  return(lastfm)
-  }
- 
+  class(scrobbles$date) <- c("POSIXt", "POSIXct")
+  attr(scrobbles$date, "tzone") <- timezone
+  
+  return(scrobbles)
+}
