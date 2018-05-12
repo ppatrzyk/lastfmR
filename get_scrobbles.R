@@ -33,7 +33,11 @@ get_scrobbles <- function(user, timezone = "") {
   
   #get number of pages
   first_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&api_key=9b5e3d77309d540e9687909aabd9d467", user)
-  page_check <- xmlTreeParse(first_url, useInternal = TRUE)
+  page_check <- try(xmlTreeParse(first_url, useInternal = TRUE), silent = TRUE)
+  if(class(page_check)[1] == "try-error"){
+    print("Invalid username")
+    return(NULL)
+  }
   current_node <- xmlRoot(page_check)
   pages <- as.numeric(xmlAttrs(current_node[[1]])[4])
   
