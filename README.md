@@ -1,5 +1,5 @@
 # lastfm-to-R
-This function will download all your scrobbles from [last.fm](https://www.last.fm/) into R. 
+R functions to download [last.fm](https://www.last.fm/) data. 
 
 ## Requirements
 
@@ -52,7 +52,7 @@ The function returns a `data.table` object with the following columns:
 
 - artist
 
-- artist_tag (the mosst popular tag)
+- artist_tag (the most popular tag)
 
 - artist_country
 
