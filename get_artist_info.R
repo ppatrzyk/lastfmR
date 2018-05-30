@@ -10,8 +10,6 @@
 #    artists <- c("Anthrax", "Metallica", "Megadeth", "Slayer")
 #    artist_info <- get_artist_info(method = "artist_vector", artist_vector = artists)
 #
-# 3. Depending on the size of your Last.fm library, downloading might take a while
-#
 get_artist_info <- function(user = "", method = "library", artist_vector = character(), timezone = ""){
   
   #check method
@@ -25,36 +23,39 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     return(NULL)
   }
   
-  #load required packages
-  if("XML" %in% rownames(installed.packages()) == FALSE) {
-    install.packages("XML")
-  }
-  
-  if("data.table" %in% rownames(installed.packages()) == FALSE) {
-    install.packages("data.table")
-  }
-  
-  if(require("XML")){
-    print("XML loaded")
-  } else {
-    print("Failed to load XML package")
-    return(NULL)
-  }
-  
-  if(require("data.table")){
-    print("data.table loaded")
-  } else {
-    print("Failed to load data.table package")
-    return(NULL)
+  #install/load required packages
+  packages <- c("curl", "XML", "data.table")
+  for(i in 1:length(packages)){
+    
+    package <- packages[i]
+    
+    if(package %in% rownames(installed.packages()) == FALSE) {
+      install.packages(package)
+    }
+    
+    if(require(package, character.only = TRUE)){
+      print(paste0(package, " loaded"))
+    } else {
+      print(paste0("Failed to load ",  package, " package"))
+      return(NULL)
+    }
   }
   
   #load country data
   countries <- read.csv(url("https://raw.githubusercontent.com/ppatrzyk/lastfm-to-R/master/get_countries/countries.csv"), stringsAsFactors=FALSE)
   
+  #api key
+  lastfm_api <- "9b5e3d77309d540e9687909aabd9d467"
+  
   if(method == "library"){
     
     #library
-    first_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=%s&limit=1000&api_key=9b5e3d77309d540e9687909aabd9d467", user)
+    first_url <- paste0(
+      "http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=",
+      user,
+      "&limit=1000&api_key=",
+      lastfm_api
+    )
     page_check <- try(xmlTreeParse(first_url, useInternal = TRUE), silent = TRUE)
     if(class(page_check)[1] == "try-error"){
       print("Invalid username")
@@ -76,11 +77,34 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
       user_scrobbles = as.integer(rep(NA_integer_, total))
     )
     
-    #get artists / user scrobble counts from library
+    #get XML files
+    lastfm_urls_lib <- paste0(
+      "http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=",
+      user,
+      "&limit=1000&page=",
+      seq(pages),
+      "&api_key=",
+      lastfm_api
+    )
+    lastfm_xmls_lib <- rep(NA_character_, pages)
+    add_data_lib <- function(x){
+      index <- which(lastfm_urls_lib == x$url)
+      lastfm_xmls_lib[index] <<- rawToChar(x$content)
+    }
+    pool <- new_pool()
+    for (i in seq(pages)) {
+      curl_fetch_multi(lastfm_urls_lib[i], pool = pool, done = add_data_lib)
+    }
+    
+    print(paste0("Fetching artists from ", user, " library ..."))
+    out <- multi_run(pool = pool)
+    
+    #parsing data
+    print(paste0("Parsing ", user, " library ..."))
     for(i in 1:pages){
       
-      current_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, i)
-      parsed <- xmlTreeParse(current_url, useInternal = TRUE)
+      current_page <- lastfm_xmls_lib[i]
+      parsed <- xmlTreeParse(current_page, useInternal = TRUE)
       current_node <- xmlRoot(parsed)
       
       for(j in 1:1000){
@@ -124,16 +148,79 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     
   }
   
-  #get artist info
+  #get artist info: scrobbles/listeners/tags
+  
+  artists <- artist_info[, artist]
+  artists_encoded <- sapply(artists, function(x) URLencode(x, reserved = TRUE))
+  
+  #get XML files
+  lastfm_urls_artists <- paste0(
+    "http://ws.audioscrobbler.com/2.0/?method=artist.getInfo&artist=",
+    artists_encoded,
+    "&api_key=",
+    lastfm_api
+  )
+  
+  lastfm_urls_tags <- paste0(
+    "http://ws.audioscrobbler.com/2.0/?method=artist.gettoptags&artist=",
+    artists_encoded,
+    "&api_key=",
+    lastfm_api
+  )
+  
+  lastfm_xmls_artists <- rep(NA_character_, length(artists))
+  lastfm_xmls_tags <- rep(NA_character_, length(artists))
+  
+  add_data_artists <- function(x){
+    index <- which(lastfm_urls_artists == x$url)
+    lastfm_xmls_artists[index] <<- rawToChar(x$content)
+  }
+  add_data_tags <- function(x){
+    index <- which(lastfm_urls_tags == x$url)
+    lastfm_xmls_tags[index] <<- rawToChar(x$content)
+  }
+  
+  #define download procedure for each batch (100 urls per call)
+  
+  run_batch <- function(indices){
+    artist_pool <- new_pool()
+    tag_pool <- new_pool()
+    for (i in indices) {
+      curl_fetch_multi(lastfm_urls_artists[i], pool = artist_pool, done = add_data_artists)
+      curl_fetch_multi(lastfm_urls_tags[i], pool = tag_pool, done = add_data_tags)
+    }
+    out <- multi_run(pool = artist_pool)
+    out <- multi_run(pool = tag_pool)
+  }
+  
+  all_indices <- 1:length(artists)
+  batches <- split(all_indices, ceiling(seq_along(all_indices) / 100))
+  
+  print("Downloading data")
+  for (i in 1:length(batches)) { 
+    current_batch <- batches[[i]]
+    run_batch(current_batch)
+    print(
+      paste0(
+        "Batch ", i, 
+        "/", length(batches),
+        " processed (",
+        round(100 * i / length(batches), 2), "%)"
+      )
+    )
+  }
+  
+  #parsing data
+  print("Parsing data")
   for (i in 1:nrow(artist_info)) {
     
-    artist <- artist_info[i, artist]
-    artist_encoded <- URLencode(artist, reserved = TRUE)
-    artist_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=artist.getInfo&artist=%s&api_key=9b5e3d77309d540e9687909aabd9d467", artist_encoded)
-    parse <- try(xmlTreeParse(artist_url, useInternal = TRUE), silent = TRUE)
+    artist_xml <- lastfm_xmls_artists[i]
+    tag_xml <- lastfm_xmls_tags[i]
+    
+    parse <- try(xmlTreeParse(artist_xml, useInternal = TRUE), silent = TRUE)
     if(class(parse)[1] == "try-error"){
-      print(paste("No artist called", artist))
-      return(NULL)
+      print(paste("No artist called", artists[i]))
+      next
     }
     artist_node <- xmlRoot(parse)
     
@@ -156,8 +243,7 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     )
     
     #get tags
-    tag_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=artist.gettoptags&artist=%s&api_key=9b5e3d77309d540e9687909aabd9d467", artist_encoded)
-    parse <- try(xmlTreeParse(tag_url, useInternal = TRUE), silent = TRUE)
+    parse <- try(xmlTreeParse(tag_xml, useInternal = TRUE), silent = TRUE)
     if(class(parse)[1] == "try-error"){
       print(paste("No tags for", artist))
     }else{
@@ -196,11 +282,12 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     }
     
     #print progress
-    print(paste(
-      round(100 * i / nrow(artist_info), digits = 2),
-      "% processed"
-    ))
-    
+    if(i %% 10 == 0 | i == nrow(artist_info)){
+      print(paste(
+        round(100 * i / nrow(artist_info), digits = 2),
+        "% processed"
+      ))
+    }
   }
   return(artist_info)
 }

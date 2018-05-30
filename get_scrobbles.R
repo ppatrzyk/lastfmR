@@ -4,35 +4,36 @@
 # 2. The function returns a data.table object; run the following line
 #    scrobbles <- get_scrobbles("enter_your_username")
 # 
-# 3. Depending on the size of your Last.fm library, downloading might take a while
-#
 get_scrobbles <- function(user, timezone = "") {
   
-  #load required packages
-  if("XML" %in% rownames(installed.packages()) == FALSE) {
-    install.packages("XML")
+  #install/load required packages
+  packages <- c("curl", "XML", "data.table")
+  for(i in 1:length(packages)){
+    
+    package <- packages[i]
+    
+    if(package %in% rownames(installed.packages()) == FALSE) {
+      install.packages(package)
+    }
+    
+    if(require(package, character.only = TRUE)){
+      print(paste0(package, " loaded"))
+    } else {
+      print(paste0("Failed to load ",  package, " package"))
+      return(NULL)
+    }
   }
   
-  if("data.table" %in% rownames(installed.packages()) == FALSE) {
-    install.packages("data.table")
-  }
-  
-  if(require("XML")){
-    print("XML loaded")
-  } else {
-    print("Failed to load XML package")
-    return(NULL)
-  }
-  
-  if(require("data.table")){
-    print("data.table loaded")
-  } else {
-    print("Failed to load data.table package")
-    return(NULL)
-  }
+  #api key
+  lastfm_api <- "9b5e3d77309d540e9687909aabd9d467"
   
   #get number of pages
-  first_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&api_key=9b5e3d77309d540e9687909aabd9d467", user)
+  first_url <- paste0(
+    "http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=",
+    user,
+    "&limit=1000&api_key=",
+    lastfm_api
+  )
   page_check <- try(xmlTreeParse(first_url, useInternal = TRUE), silent = TRUE)
   if(class(page_check)[1] == "try-error"){
     print("Invalid username")
@@ -53,10 +54,35 @@ get_scrobbles <- function(user, timezone = "") {
     album = as.character(rep(NA, total))
   )
   
-  for (i in 1:pages) {
+  #get XML files
+  lastfm_urls <- paste0(
+    "http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=",
+    user,
+    "&limit=1000&page=",
+    seq(pages),
+    "&api_key=",
+    lastfm_api
+  )
+  
+  lastfm_xmls <- rep(NA_character_, pages)
+  add_data <- function(x){
+    index <- which(lastfm_urls == x$url)
+    lastfm_xmls[index] <<- rawToChar(x$content)
+  }
+  pool <- new_pool()
+  for (i in seq(pages)) {
+    curl_fetch_multi(lastfm_urls[i], pool = pool, done = add_data)
+  }
+  
+  print("Downloading data from last.fm ...")
+  out <- multi_run(pool = pool)
+  
+  #process XML files
+  print("Parsing data ...")
+  for (i in seq(pages)) {
     
-    current_url <- sprintf("http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=%s&limit=1000&page=%s&api_key=9b5e3d77309d540e9687909aabd9d467", user, i)
-    parsed <- xmlTreeParse(current_url, useInternal = TRUE)
+    current_page <- lastfm_xmls[i]
+    parsed <- xmlTreeParse(current_page, useInternal = TRUE)
     current_node <- xmlRoot(parsed)
     
     for (j in 1:1000) {
@@ -97,7 +123,13 @@ get_scrobbles <- function(user, timezone = "") {
         xmlValue(current_node[[1]][[j]][5]$album)
       )
     }
-    print(paste(round(100 * i / pages, digits = 2), "% downloaded", sep = ""))
+    #print progress
+    if(i %% 10 == 0 | i == pages){
+      print(paste(
+        round(100 * i / pages, digits = 2),
+        "% processed"
+      ))
+    }
   }
   
   #remove empty rows

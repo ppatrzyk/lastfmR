@@ -3,7 +3,9 @@ R functions to download [last.fm](https://www.last.fm/) data.
 
 ## Requirements
 
-- R package [XML](https://cran.r-project.org/web/packages/XML/)
+- R package [curl](https://cran.r-project.org/web/packages/curl/),
+
+- R package [XML](https://cran.r-project.org/web/packages/XML/),
 
 - R package [data.table](https://cran.r-project.org/web/packages/data.table/).
 
