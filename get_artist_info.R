@@ -41,9 +41,6 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     }
   }
   
-  #load country data
-  countries <- read.csv(url("https://raw.githubusercontent.com/ppatrzyk/lastfm-to-R/master/get_countries/countries.csv"), stringsAsFactors=FALSE)
-  
   #api key
   lastfm_api <- "9b5e3d77309d540e9687909aabd9d467"
   
@@ -71,7 +68,6 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     artist_info <- data.table(
       artist = as.character(rep(NA, total)),
       artist_tag = as.character(rep(NA, total)),
-      artist_country = as.character(rep(NA, total)),
       global_listners = as.integer(rep(NA_integer_, total)),
       global_scrobbles = as.integer(rep(NA_integer_, total)),
       user_scrobbles = as.integer(rep(NA_integer_, total))
@@ -119,13 +115,13 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
         
         #set artist
         set(
-          artist_info, index, 1L,
+          artist_info, index, "artist",
           xmlValue(current_node[[1]][[j]][1]$name)
         )
         
         #set user scrobbles
         set(
-          artist_info, index, 6L,
+          artist_info, index, "user scrobbles",
           as.integer(xmlValue(current_node[[1]][[j]][2]$playcount))
         )
         
@@ -141,7 +137,6 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     artist_info <- data.table(
       artist = artist_vector,
       artist_tag = as.character(rep(NA, total)),
-      artist_country = as.character(rep(NA, total)),
       global_listners = as.integer(rep(NA_integer_, total)),
       global_scrobbles = as.integer(rep(NA_integer_, total))
     )
@@ -226,19 +221,19 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
     
     #set global listeners
     set(
-      artist_info, i, 4L,
+      artist_info, i, "global_listners",
       as.integer(xmlValue(artist_node[[1]][["stats"]][["listeners"]]))
     )
     
     #set global scrobbles
     set(
-      artist_info, i, 5L,
+      artist_info, i, "global_scrobbles",
       as.integer(xmlValue(artist_node[[1]][["stats"]][["playcount"]]))
     )
     
     #set top tag
     set(
-      artist_info, i, 2L,
+      artist_info, i, "artist_tag",
       as.character(xmlValue(artist_node[[1]][["tags"]][[1]][["name"]]))
     )
     
@@ -256,29 +251,6 @@ get_artist_info <- function(user = "", method = "library", artist_vector = chara
         tags <- c(tags, current_tag)
         j <- j + 1
       }
-    }
-    
-    #chceck country, more popular tags prevail in case of conflict
-    found <- FALSE
-    for(k in 1:length(tags)){
-      current_tag <- paste0("^", tags[k], "$")
-      match <- grep(current_tag, countries$adjectival, ignore.case = TRUE)
-      if(length(match) > 0) {
-        found <- TRUE
-        break
-      }
-      match <- grep(current_tag, countries$country, ignore.case = TRUE)
-      if(length(match) > 0) {
-        found <- TRUE
-        break
-      }
-    }
-    
-    if(found){
-      set(
-        artist_info, i, 3L,
-        countries$country[match[1]]
-      )
     }
     
     #print progress

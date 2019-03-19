@@ -100,26 +100,26 @@ get_scrobbles <- function(user, timezone = "") {
       if(length(rawdate) != 0){
         # = the track is not played now
         set(
-          scrobbles, index, 1L,
+          scrobbles, index, "date",
           rawdate
         )
       }
       
       #set artist
       set(
-        scrobbles, index, 2L,
+        scrobbles, index, "artist",
         xmlValue(current_node[[1]][[j]][1]$artist)
       )
       
       #set track
       set(
-        scrobbles, index, 3L,
+        scrobbles, index, "track",
         xmlValue(current_node[[1]][[j]][2]$name)
       )
       
       #set album
       set(
-        scrobbles, index, 4L,
+        scrobbles, index, "album",
         xmlValue(current_node[[1]][[j]][5]$album)
       )
     }
@@ -140,14 +140,14 @@ get_scrobbles <- function(user, timezone = "") {
   missing_date <- which(scrobbles$date == 0)
   for(i in missing_date){
     set(
-      scrobbles, i, 1L,
+      scrobbles, i, "date",
       NA_integer_
     )
   }
   missing_album <- grep("^\\s*$", scrobbles$album)
   for(i in missing_album){
     set(
-      scrobbles, i, 4L,
+      scrobbles, i, "album",
       NA
     )
   }

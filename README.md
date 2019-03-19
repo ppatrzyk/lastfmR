@@ -56,12 +56,8 @@ The function returns a `data.table` object with the following columns:
 
 - artist_tag (the most popular tag)
 
-- artist_country
-
 - global_listners
 
 - global_scrobbles
 
 - user_scrobbles (only if `method = "library"` is used)
-
-One note about *artist_country* column: in order to get this value, the function looks at the list of *tags* of given artist and checks if any of these matches an existing country name (data is taken from [Wikipedia](https://en.wikipedia.org/wiki/List_of_adjectival_and_demonymic_forms_for_countries_and_nations)). As country-related information is not always available there, expect some of the values to be `NA`. Additionally, this value might be wrong in case an artist is incorrectly tagged by the users. The latter happens especially in cases when there are multiple artists with the same name.
