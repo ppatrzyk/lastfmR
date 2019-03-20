@@ -1,12 +1,16 @@
 Package: lastfmR
-Title: What the Package Does (One Line, Title Case)
+Title: Get last.fm data into R
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Piotr",
+           family = "Patrzyk",
            role = c("aut", "cre"),
-           email = "first.last@example.com")
-Description: What the package does (one paragraph).
-License: What license it uses
+           email = "ppatrzyk@gmail.com")
+Description: R functions wrapping last.fm API.
+License: MIT
 Encoding: UTF-8
 LazyData: true
+Depends:
+    curl (>= 3.3),
+    data.table (>= 1.12.0),
+    XML (>= 3.98-1.17)
