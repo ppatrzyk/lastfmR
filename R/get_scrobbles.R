@@ -1,13 +1,14 @@
-#
-# 1. Run this script to import the function to the environment
-#
-# 2. The function returns a data.table object; run the following line
-#    scrobbles <- get_scrobbles("enter_your_username")
-#
-get_scrobbles <- function(user, timezone = "") {
-
-  #api key
-  lastfm_api <- "9b5e3d77309d540e9687909aabd9d467"
+#' Get all scroblles for a given user
+#'
+#' @param user Last.fm username
+#'
+#' @return \code{data.table} object with columns: date, track, artist, album
+#'
+#' @examples
+#' scrobbles <- get_scrobbles(user = "enter_your_username")
+#'
+#' @export
+get_scrobbles <- function(user) {
 
   #get number of pages
   first_url <- paste0(
@@ -119,24 +120,12 @@ get_scrobbles <- function(user, timezone = "") {
   scrobbles <- scrobbles[!empty_rows,]
 
   #handle missing values
-  missing_date <- which(scrobbles$date == 0)
-  for(i in missing_date){
-    set(
-      scrobbles, i, "date",
-      NA_integer_
-    )
-  }
-  missing_album <- grep("^\\s*$", scrobbles$album)
-  for(i in missing_album){
-    set(
-      scrobbles, i, "album",
-      NA
-    )
-  }
+  scrobbles[date == 0, date := NA_integer_]
+  scrobbles[grepl("^\\s*$", album), album := NA_character_]
 
   #date formatting
   class(scrobbles$date) <- c("POSIXt", "POSIXct")
-  attr(scrobbles$date, "tzone") <- timezone
+  attr(scrobbles$date, "tzone") <- "GMT"
 
   return(scrobbles)
 }
