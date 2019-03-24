@@ -25,12 +25,12 @@ get_scrobbles <- function(user) {
     stop("Invalid username")
   }
   close(first_url_conn)
-  pageline <- grep('recenttracks', content, value = TRUE, ignore.case = TRUE)[1]
-  pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>)", pageline, ignore.case = TRUE))))
+  pageline <- grep('recenttracks', page_check, value = TRUE, ignore.case = TRUE)[1]
+  pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>|<)", pageline, ignore.case = TRUE))))
 
   #total number of scrobbles
   #+20 to prevent out of range error (if the user is scrobbling right now, data grows during downloading)
-  total <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("total=.*?( |>)", pageline, ignore.case = TRUE)))) + 20
+  total <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("total=.*?( |>|<)", pageline, ignore.case = TRUE)))) + 20
 
   #allocate data.table
   scrobbles <- data.table(

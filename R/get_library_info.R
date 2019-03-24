@@ -12,37 +12,33 @@
 #' @export
 get_library_info <- function(user){
 
-  # TODO this won't work now, add user lib and call call get artist info
-
   #library
   first_url <- paste0(
-    "http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=",
+    api_root,
+    'library.getartists&user=',
     user,
-    "&limit=1000&api_key=",
+    '&limit=1000&api_key=',
     api_key
   )
-  page_check <- try(xmlTreeParse(first_url, useInternal = TRUE), silent = TRUE)
+  first_url_conn <- curl(first_url)
+  page_check <- try(readLines(first_url_conn), silent = TRUE)
   if(class(page_check)[1] == "try-error"){
-    print("Invalid username")
-    return(NULL)
+    # todo connection problems vs invalid username (?)
+    stop("Invalid username")
   }
-  current_node <- xmlRoot(page_check)
+  close(first_url_conn)
 
-  #total number of scrobbles
-  pages <- as.numeric(xmlAttrs(current_node[[1]])[4])
-  total <- as.numeric(xmlAttrs(current_node[[1]])[5])
+  pageline <- grep('<artists', page_check, value = TRUE, ignore.case = TRUE)[1]
+  pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>)", pageline, ignore.case = TRUE))))
+  total <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("total=.*?( |>|<)", pageline, ignore.case = TRUE))))
 
   #allocate data.table
-  artist_info <- data.table(
-    artist = as.character(rep(NA, total)),
-    artist_tag = as.character(rep(NA, total)),
-    global_listners = as.integer(rep(NA_integer_, total)),
-    global_scrobbles = as.integer(rep(NA_integer_, total)),
+  user_artists <- data.table(
+    artist = as.character(rep(NA_character_, total)),
     user_scrobbles = as.integer(rep(NA_integer_, total))
   )
 
-  #get XML files
-  lastfm_urls_lib <- paste0(
+  lastfm_urls <- paste0(
     api_root,
     "library.getartists&user=",
     user,
@@ -51,50 +47,28 @@ get_library_info <- function(user){
     "&api_key=",
     api_key
   )
-  lastfm_xmls_lib <- rep(NA_character_, pages)
-  add_data_lib <- function(x){
-    index <- which(lastfm_urls_lib == x$url)
-    lastfm_xmls_lib[index] <<- rawToChar(x$content)
+
+  add_data <- function(response){
+    page_index <- which(lastfm_urls == response$url)
+    content <- unlist(strsplit(rawToChar(response$content), '\n'))
+    artists <- get_entries(content, '<name')
+    scrobbles <- as.integer(get_entries(content, '<playcount'))
+    start_index <- as.integer(((page_index - 1) * 1000) + 1)
+    end_index <- start_index + length(artists) - 1
+    user_artists[
+      start_index:end_index,
+      `:=`(artist = artists, user_scrobbles = scrobbles)
+      ]
   }
-  pool <- new_pool()
-  for (i in seq(pages)) {
-    curl_fetch_multi(lastfm_urls_lib[i], pool = pool, done = add_data_lib)
-  }
+  run_batch(url_list = lastfm_urls, indices = seq(pages), update_data = add_data)
 
-  print(paste0("Fetching artists from ", user, " library ..."))
-  out <- multi_run(pool = pool)
+  artist_info <- get_artist_info(artist_vector = user_artists$artist)
+  user_artists <- merge(
+    user_artists, artist_info,
+    by = 'artist', all = TRUE
+  )[
+    order(user_scrobbles, decreasing = TRUE)
+  ]
 
-  #parsing data
-  print(paste0("Parsing ", user, " library ..."))
-  for(i in 1:pages){
-
-    current_page <- lastfm_xmls_lib[i]
-    parsed <- xmlTreeParse(current_page, useInternal = TRUE)
-    current_node <- xmlRoot(parsed)
-
-    for(j in 1:1000){
-
-      #check if end of page is reached (last page has < 1000 entries)
-      if(is.na(xmlValue(current_node[[1]][[j]]))){
-        break
-      }
-
-      #row index in data.table
-      index <- as.integer(((i - 1) * 1000) + j)
-
-      #set artist
-      set(
-        artist_info, index, "artist",
-        xmlValue(current_node[[1]][[j]][1]$name)
-      )
-
-      #set user scrobbles
-      set(
-        artist_info, index, "user scrobbles",
-        as.integer(xmlValue(current_node[[1]][[j]][2]$playcount))
-      )
-
-    }
-
-  }
+  return(user_artists)
 }
