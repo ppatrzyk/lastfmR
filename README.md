@@ -18,12 +18,12 @@ This function will download all scrobbles for a specified user. Example:
 ```R
 scrobbles <- get_scrobbles(user = "grinder91")
 > scrobbles[sample(.N, 5), ]
-                  date           artist                    track                   album
-1: 2015-12-22 13:26:11     Echo Syndrom    Zagłada (bonus track)              BEZSENNOŚĆ
-2: 2014-07-14 15:49:29          Manowar             Call to Arms   Warriors of the World
-3: 2008-08-23 10:03:21          Bauhaus The Three Shadows Part 1 The Sky&apos;s Gone Out
-4: 2008-05-28 18:12:46              KSU                Moje Oczy                Ustrzyki
-5: 2016-09-19 11:15:21 In Death It Ends           Power Of Seven          Sanctus Mortem
+                  date        artist              track                             album
+1: 2014-04-29 10:23:24 The Awakening Before I Leap (XV)                      Anthology XV
+2: 2009-11-25 17:46:06  Judas Priest  Take on the World Killing Machine [Remastered] [UK]
+3: 2016-07-16 10:02:38  FOREVER GREY     Full Of Lights                              <NA>
+4: 2011-06-26 10:36:23       Bauhaus  Small Talk Stinks                 In the Flat Field
+5: 2019-02-15 22:20:35          Past             Czarna                    czarno / biala
 ```
 
 ### get_artist_info
@@ -34,11 +34,11 @@ This function will download information about specific artists. Example:
 artists <- c("Anthrax", "Metallica", "Megadeth", "Slayer")
 artist_info <- get_artist_info(artist_vector = artists)
 > artist_info
-      artist                                              artist_tags global_listeners global_scrobbles
-1:   Anthrax thrash metal; metal; heavy metal; speed metal; seen live           867775         25910522
-2: Metallica        thrash metal; metal; heavy metal; hard rock; rock          2890695        280742907
-3:  Megadeth thrash metal; heavy metal; metal; speed metal; seen live          1410966         97458296
-4:    Slayer thrash metal; metal; seen live; speed metal; heavy metal          1366827         82132980
+      artist global_listeners global_scrobbles                                              artist_tags
+1:   Anthrax           867775         25910522 thrash metal; metal; heavy metal; speed metal; seen live
+2: Metallica          2890695        280742907        thrash metal; metal; heavy metal; hard rock; rock
+3:  Megadeth          1410966         97458296 thrash metal; heavy metal; metal; speed metal; seen live
+4:    Slayer          1366827         82132980 thrash metal; metal; seen live; speed metal; heavy metal
 ```
 
 ### get_library_info
@@ -48,10 +48,10 @@ Extension of `get_artist_info`. Gets list of artists in a specified user's libra
 ```R
 artist_info <- get_library_info(user = "grinder91")
 > artist_info[sample(.N, 5), ]
-           artist user_scrobbles                                                artist_tags global_listeners global_scrobbles
-1: Marilyn Manson            186     industrial; industrial metal; metal; rock; alternative          2233411        122137950
-2:          PLOHO             15 post-punk; coldwave; russian; Russian Post-Punk; seen live            18604           565067
-3:     Switchface             12 ebm; dark electro; electro-industrial; industrial; electro             2670            25780
-4:  The Exploited              2      punk; hardcore punk; punk rock; street punk; hardcore           243440          6265333
-5:    Pornografia             30       cold wave; polish; zimna fala; coldwave; Gothic Rock             1360            35898
+            artist user_scrobbles global_listeners global_scrobbles                                             artist_tags
+1:    Peine Perdue             15             2645            35717   minimal synth; minimal wave; french; synthpop; france
+2:        Motorama             10           171162          7331742          post-punk; new wave; indie; russian; seen live
+3:     Perturbator             97           149293          6829118 synthwave; electronic; synthpop; retro electro; electro
+4:   The Deep Wave              1              180              905               new wave; post-punk; retrowave; synthwave
+5: Psychoformalina            621              739            13435      zimna fala; post-punk; cold wave; coldwave; polish
 ```

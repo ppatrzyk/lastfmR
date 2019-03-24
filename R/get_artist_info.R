@@ -18,9 +18,9 @@ get_artist_info <- function(artist_vector){
   #allocate data.table
   artist_info <- data.table(
     artist = artist_vector,
-    artist_tags = as.character(rep(NA_character_, total)),
     global_listeners = as.integer(rep(NA_integer_, total)),
-    global_scrobbles = as.integer(rep(NA_integer_, total))
+    global_scrobbles = as.integer(rep(NA_integer_, total)),
+    artist_tags = as.character(rep(NA_character_, total))
   )
 
   artists_encoded <- sapply(artist_vector, function(x) URLencode(x, reserved = TRUE))
