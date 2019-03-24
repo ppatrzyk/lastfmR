@@ -19,7 +19,7 @@ get_library_info <- function(user){
     "http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=",
     user,
     "&limit=1000&api_key=",
-    lastfm_api
+    api_key
   )
   page_check <- try(xmlTreeParse(first_url, useInternal = TRUE), silent = TRUE)
   if(class(page_check)[1] == "try-error"){
@@ -43,12 +43,13 @@ get_library_info <- function(user){
 
   #get XML files
   lastfm_urls_lib <- paste0(
-    "http://ws.audioscrobbler.com/2.0/?method=library.getartists&user=",
+    api_root,
+    "library.getartists&user=",
     user,
     "&limit=1000&page=",
     seq(pages),
     "&api_key=",
-    lastfm_api
+    api_key
   )
   lastfm_xmls_lib <- rep(NA_character_, pages)
   add_data_lib <- function(x){

@@ -30,17 +30,19 @@ get_artist_info <- function(artist_vector){
 
   #get XML files
   lastfm_urls_artists <- paste0(
-    "http://ws.audioscrobbler.com/2.0/?method=artist.getInfo&artist=",
+    api_root,
+    "artist.getInfo&artist=",
     artists_encoded,
     "&api_key=",
-    lastfm_api
+    api_key
   )
 
   lastfm_urls_tags <- paste0(
-    "http://ws.audioscrobbler.com/2.0/?method=artist.gettoptags&artist=",
+    api_root,
+    "artist.gettoptags&artist=",
     artists_encoded,
     "&api_key=",
-    lastfm_api
+    api_key
   )
 
   lastfm_xmls_artists <- rep(NA_character_, length(artists))

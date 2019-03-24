@@ -12,29 +12,32 @@ get_scrobbles <- function(user) {
 
   #get number of pages
   first_url <- paste0(
-    "http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=",
+    api_root,
+    "user.getRecentTracks&user=",
     user,
     "&limit=1000&api_key=",
-    lastfm_api
+    api_key
   )
-  page_check <- try(xmlTreeParse(first_url, useInternal = TRUE), silent = TRUE)
+  first_url_conn <- curl(first_url)
+  page_check <- try(readLines(first_url_conn), silent = TRUE)
   if(class(page_check)[1] == "try-error"){
-    print("Invalid username")
-    return(NULL)
+    # todo connection problems vs invalid username (?)
+    stop("Invalid username")
   }
-  current_node <- xmlRoot(page_check)
-  pages <- as.numeric(xmlAttrs(current_node[[1]])[4])
+  close(first_url_conn)
+  pageline <- grep('recenttracks', content, value = TRUE, ignore.case = TRUE)[1]
+  pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>)", pageline, ignore.case = TRUE))))
 
   #total number of scrobbles
   #+20 to prevent out of range error (if the user is scrobbling right now, data grows during downloading)
-  total <- as.numeric(xmlAttrs(current_node[[1]])[5]) + 20
+  total <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("total=.*?( |>)", pageline, ignore.case = TRUE)))) + 20
 
   #allocate data.table
   scrobbles <- data.table(
-    date = as.numeric(rep(NA_integer_, total)),
-    artist = as.character(rep(NA, total)),
-    track = as.character(rep(NA, total)),
-    album = as.character(rep(NA, total))
+    date = as.integer(rep(NA_integer_, total)),
+    artist = as.character(rep(NA_character_, total)),
+    track = as.character(rep(NA_character_, total)),
+    album = as.character(rep(NA_character_, total))
   )
 
   #get XML files
@@ -44,76 +47,27 @@ get_scrobbles <- function(user) {
     "&limit=1000&page=",
     seq(pages),
     "&api_key=",
-    lastfm_api
+    api_key
   )
 
-  lastfm_xmls <- rep(NA_character_, pages)
-  add_data <- function(x){
-    index <- which(lastfm_urls == x$url)
-    lastfm_xmls[index] <<- rawToChar(x$content)
+  pb <- txtProgressBar(min = 0, max = pages, style = 3)
+  add_data <- function(response){
+    page_index <- which(lastfm_urls == response$url)
+    content <- unlist(strsplit(rawToChar(response$content), '\n'))
+    dates <- as.integer(get_entries(content, '<date', by_attribute = TRUE))
+    artists <- get_entries(content, '<artist')
+    tracks <- get_entries(content, '<name')
+    albums <- get_entries(content, '<album')
+    start_index <- as.integer(((page_index - 1) * 1000) + 1)
+    end_index <- start_index + length(artists) - 1
+    scrobbles[
+      start_index:end_index,
+      `:=`(date = dates, artist = artists, track = tracks, album = albums)
+    ]
+    setTxtProgressBar(pb, getTxtProgressBar(pb) + 1L)
   }
-  pool <- new_pool()
-  for (i in seq(pages)) {
-    curl_fetch_multi(lastfm_urls[i], pool = pool, done = add_data)
-  }
 
-  print("Downloading data from last.fm ...")
-  out <- multi_run(pool = pool)
-
-  #process XML files
-  print("Parsing data ...")
-  for (i in seq(pages)) {
-
-    current_page <- lastfm_xmls[i]
-    parsed <- xmlTreeParse(current_page, useInternal = TRUE)
-    current_node <- xmlRoot(parsed)
-
-    for (j in 1:1000) {
-
-      #check if end of page is reached (last page has < 1000 entries)
-      if(is.na(xmlValue(current_node[[1]][[j]]))){
-        break
-      }
-
-      #row index in data.table
-      index <- as.integer(((i - 1) * 1000) + j)
-
-      #set date
-      rawdate <- as.integer(xmlApply(current_node[[1]][[j]], xmlAttrs)$date)
-      if(length(rawdate) != 0){
-        # = the track is not played now
-        set(
-          scrobbles, index, "date",
-          rawdate
-        )
-      }
-
-      #set artist
-      set(
-        scrobbles, index, "artist",
-        xmlValue(current_node[[1]][[j]][1]$artist)
-      )
-
-      #set track
-      set(
-        scrobbles, index, "track",
-        xmlValue(current_node[[1]][[j]][2]$name)
-      )
-
-      #set album
-      set(
-        scrobbles, index, "album",
-        xmlValue(current_node[[1]][[j]][5]$album)
-      )
-    }
-    #print progress
-    if(i %% 10 == 0 | i == pages){
-      print(paste(
-        round(100 * i / pages, digits = 2),
-        "% processed"
-      ))
-    }
-  }
+  run_batch(url_list = lastfm_urls, indices = seq(pages), update_data = add_data)
 
   #remove empty rows
   empty_rows <- apply(scrobbles, 1, function(x) all(is.na(x)))
@@ -127,5 +81,6 @@ get_scrobbles <- function(user) {
   class(scrobbles$date) <- c("POSIXt", "POSIXct")
   attr(scrobbles$date, "tzone") <- "GMT"
 
+  close(pb)
   return(scrobbles)
 }
