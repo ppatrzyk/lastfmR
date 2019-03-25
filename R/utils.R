@@ -2,6 +2,14 @@
 api_root <- "http://ws.audioscrobbler.com/2.0/?method="
 api_key <- "23fadd845ffb9a4ece7caeaecd74c94e"
 
+# reformat curl reponse
+parse_content <- function(response){
+  raw <- rawToChar(response$content)
+  Encoding(raw) <- 'UTF-8'
+  content <- unlist(strsplit(raw, '\n'))
+  return(content)
+}
+
 #helpers for get_entries
 extract_content <- function(line){
   value <- gsub('>|</', '', regmatches(line, regexpr(">.*</", line, ignore.case = TRUE)))

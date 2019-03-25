@@ -20,11 +20,11 @@ get_scrobbles <- function(user) {
   )
   first_url_conn <- curl(first_url)
   page_check <- try(readLines(first_url_conn), silent = TRUE)
+  close(first_url_conn)
   if(class(page_check)[1] == "try-error"){
     # todo connection problems vs invalid username (?)
     stop("Invalid username")
   }
-  close(first_url_conn)
   pageline <- grep('recenttracks', page_check, value = TRUE, ignore.case = TRUE)[1]
   pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>|<)", pageline, ignore.case = TRUE))))
 
@@ -53,7 +53,7 @@ get_scrobbles <- function(user) {
   pb <- txtProgressBar(min = 0, max = pages, style = 3)
   add_data <- function(response){
     page_index <- which(lastfm_urls == response$url)
-    content <- unlist(strsplit(rawToChar(response$content), '\n'))
+    content <- parse_content(response)
     dates <- as.integer(get_entries(content, '<date', by_attribute = TRUE))
     artists <- get_entries(content, '<artist')
     tracks <- get_entries(content, '<name')

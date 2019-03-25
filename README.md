@@ -4,6 +4,8 @@ R package wrapping useful [last.fm](https://www.last.fm/) API methods.
 ## Installation
 
 ```R
+remotes::install_github("ppatrzyk/lastfmR")
+# OR
 devtools::install_github("ppatrzyk/lastfmR")
 ```
 

@@ -36,7 +36,7 @@ get_artist_info <- function(artist_vector){
   pb <- txtProgressBar(min = 0, max = total, style = 3)
   add_data <- function(response){
     page_index <- which(lastfm_urls == response$url)
-    content <- unlist(strsplit(rawToChar(response$content), '\n'))
+    content <- parse_content(response)
     tags <- paste(gsub('<name|<tag[s]*', '', get_entries(content, '<tag><name')), collapse = "; ")
     listeners <- as.integer(gsub('[^0-9]', '', get_entries(content, '<stats><listeners')))
     scrobbles <- as.integer(get_entries(content, '<playcount'))

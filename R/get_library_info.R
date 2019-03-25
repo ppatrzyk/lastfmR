@@ -22,11 +22,11 @@ get_library_info <- function(user){
   )
   first_url_conn <- curl(first_url)
   page_check <- try(readLines(first_url_conn), silent = TRUE)
+  close(first_url_conn)
   if(class(page_check)[1] == "try-error"){
     # todo connection problems vs invalid username (?)
     stop("Invalid username")
   }
-  close(first_url_conn)
 
   pageline <- grep('<artists', page_check, value = TRUE, ignore.case = TRUE)[1]
   pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>)", pageline, ignore.case = TRUE))))
@@ -50,7 +50,7 @@ get_library_info <- function(user){
 
   add_data <- function(response){
     page_index <- which(lastfm_urls == response$url)
-    content <- unlist(strsplit(rawToChar(response$content), '\n'))
+    content <- parse_content(response)
     artists <- get_entries(content, '<name')
     scrobbles <- as.integer(get_entries(content, '<playcount'))
     start_index <- as.integer(((page_index - 1) * 1000) + 1)

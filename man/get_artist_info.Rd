@@ -10,7 +10,7 @@ get_artist_info(artist_vector)
 \item{artist_vector}{\code{character} vector with specified artists}
 }
 \value{
-\code{data.table} object with columns: artist, artist_tag, global_listners, global_scrobbles
+\code{data.table} object with columns: artist, artist_tag, global_listeners, global_scrobbles
 }
 \description{
 Get info about artists
