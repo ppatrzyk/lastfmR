@@ -28,9 +28,10 @@ get_library_info <- function(user){
     stop("Invalid username")
   }
 
-  pageline <- grep('<artists', page_check, value = TRUE, ignore.case = TRUE)[1]
-  pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>)", pageline, ignore.case = TRUE))))
-  total <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("total=.*?( |>|<)", pageline, ignore.case = TRUE))))
+  parsed_xml <- read_xml(paste(page_check, collapse = '\n'))
+  pageline <- xml_find_first(parsed_xml, ".//artists")
+  pages <- as.integer(xml_attr(pageline, 'totalPages'))
+  total <- as.integer(xml_attr(pageline, 'total'))
 
   #allocate data.table
   user_artists <- data.table(
@@ -50,9 +51,10 @@ get_library_info <- function(user){
 
   add_data <- function(response){
     page_index <- which(lastfm_urls == response$url)
-    content <- parse_content(response)
-    artists <- get_entries(content, '<name')
-    scrobbles <- as.integer(get_entries(content, '<playcount'))
+    parsed_xml <- read_xml(parse_content(response))
+    entries <- xml_find_all(parsed_xml, './/artist')
+    artists <- xml_text(xml_find_all(entries, './/name'))
+    scrobbles <- as.integer(xml_text(xml_find_all(entries, './/playcount')))
     start_index <- as.integer(((page_index - 1) * 1000) + 1)
     end_index <- start_index + length(artists) - 1
     user_artists[

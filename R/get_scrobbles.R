@@ -25,12 +25,13 @@ get_scrobbles <- function(user) {
     # todo connection problems vs invalid username (?)
     stop("Invalid username")
   }
-  pageline <- grep('recenttracks', page_check, value = TRUE, ignore.case = TRUE)[1]
-  pages <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("totalpages.*?( |>|<)", pageline, ignore.case = TRUE))))
-
-  #total number of scrobbles
-  #+20 to prevent out of range error (if the user is scrobbling right now, data grows during downloading)
-  total <- as.integer(gsub('[^0-9]', '', regmatches(pageline, regexpr("total=.*?( |>|<)", pageline, ignore.case = TRUE)))) + 20
+  parsed_xml <- read_xml(paste(page_check, collapse = '\n'))
+  pageline <- xml_find_first(parsed_xml, ".//recenttracks")
+  pages <- as.integer(xml_attr(pageline, 'totalPages'))
+  # total number of scrobbles
+  # +20 to prevent out of range error
+  # (if the user is scrobbling right now, data grows during downloading)
+  total <- as.integer(xml_attr(pageline, 'total')) + 20
 
   #allocate data.table
   scrobbles <- data.table(
@@ -53,11 +54,12 @@ get_scrobbles <- function(user) {
   pb <- txtProgressBar(min = 0, max = pages, style = 3)
   add_data <- function(response){
     page_index <- which(lastfm_urls == response$url)
-    content <- parse_content(response)
-    dates <- as.integer(get_entries(content, '<date', by_attribute = TRUE))
-    artists <- get_entries(content, '<artist')
-    tracks <- get_entries(content, '<name')
-    albums <- get_entries(content, '<album')
+    parsed_xml <- read_xml(parse_content(response))
+    entries <- xml_find_all(parsed_xml, ".//track")
+    dates <- as.integer(xml_attr(xml_find_all(entries, './/date'), 'uts'))
+    artists <- xml_text(xml_find_all(entries, './/artist'))
+    tracks <- xml_text(xml_find_all(entries, './/name'))
+    albums <- xml_text(xml_find_all(entries, './/album'))
     start_index <- as.integer(((page_index - 1) * 1000) + 1)
     end_index <- start_index + length(artists) - 1
     scrobbles[

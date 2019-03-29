@@ -36,14 +36,17 @@ get_artist_info <- function(artist_vector){
   pb <- txtProgressBar(min = 0, max = total, style = 3)
   add_data <- function(response){
     page_index <- which(lastfm_urls == response$url)
-    content <- parse_content(response)
-    tags <- paste(gsub('<name|<tag[s]*', '', get_entries(content, '<tag><name')), collapse = "; ")
-    listeners <- as.integer(gsub('[^0-9]', '', get_entries(content, '<stats><listeners')))
-    scrobbles <- as.integer(get_entries(content, '<playcount'))
-    artist_info[
-      page_index,
-      `:=`(artist_tags = tags, global_listeners = listeners, global_scrobbles = scrobbles)
-      ]
+    parsed_xml <- read_xml(parse_content(response))
+    status <- xml_attr(xml_find_first(parsed_xml, "..//lfm"), "status")
+    if (status == 'ok') {
+      listeners <- as.integer(xml_text(xml_find_first(parsed_xml, ".//listeners")))
+      scrobbles <- as.integer(xml_text(xml_find_first(parsed_xml, ".//playcount")))
+      tags <- paste(xml_text(xml_find_all(parsed_xml, ".//tag/name")), collapse = "; ")
+      artist_info[
+        page_index,
+        `:=`(artist_tags = tags, global_listeners = listeners, global_scrobbles = scrobbles)
+        ]
+    }
     setTxtProgressBar(pb, getTxtProgressBar(pb) + 1L)
   }
 
