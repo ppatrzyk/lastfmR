@@ -29,6 +29,7 @@ get_artist_info <- function(artist_vector){
     api_root,
     "artist.getInfo&artist=",
     artists_encoded,
+    "&autocorrect=0",
     "&api_key=",
     api_key
   )

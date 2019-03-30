@@ -1,5 +1,5 @@
 # lastfmR
-R package wrapping useful [last.fm](https://www.last.fm/) API methods. 
+R package wrapping useful [last.fm](https://www.last.fm/) API methods. The package leverages [concurrent requests](https://www.rdocumentation.org/packages/curl/versions/3.3/topics/multi) to enable *fast* data export.
 
 ## Installation
 
@@ -9,7 +9,7 @@ remotes::install_github("ppatrzyk/lastfmR")
 devtools::install_github("ppatrzyk/lastfmR")
 ```
 
-The package installs as dependencies R packages [`curl`](https://cran.r-project.org/web/packages/curl/), [`data.table`](https://cran.r-project.org/web/packages/data.table/) and [`xml2`](https://cran.r-project.org/web/packages/xml2/index.html).
+The package requires as dependencies [`curl`](https://cran.r-project.org/web/packages/curl/), [`data.table`](https://cran.r-project.org/web/packages/data.table/) and [`xml2`](https://cran.r-project.org/web/packages/xml2/index.html).
 
 ## Usage
 
