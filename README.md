@@ -28,6 +28,8 @@ scrobbles <- get_scrobbles(user = "grinder91")
 5: 2019-02-15 22:20:35          Past             Czarna                    czarno / biala
 ```
 
+Scrobble dates indicate when you *started* to play given track in *GMT* timezone. You can pass an optional `timezone` parameter with a timezone name (run `OlsonNames()` if in doubt) if you need. E.g., `get_scrobbles(user = "grinder91", timezone = 'Europe/Warsaw')`.
+
 ### get_artist_info
 
 This function will download information about specific artists. Example:

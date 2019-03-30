@@ -1,6 +1,8 @@
 #' Get all scroblles for a given user
 #'
 #' @param user Last.fm username
+#' @param timezone (optional) defaults to GMT.
+#' Pass any timezone name as in \code{OlsonNames()} if you need to convert
 #'
 #' @return \code{data.table} object with columns: date, track, artist, album
 #'
@@ -8,7 +10,7 @@
 #' scrobbles <- get_scrobbles(user = "enter_your_username")
 #'
 #' @export
-get_scrobbles <- function(user) {
+get_scrobbles <- function(user, timezone = 'GMT') {
 
   #get number of pages
   first_url <- paste0(
@@ -56,6 +58,9 @@ get_scrobbles <- function(user) {
     page_index <- which(lastfm_urls == response$url)
     parsed_xml <- read_xml(parse_content(response))
     entries <- xml_find_all(parsed_xml, ".//track")
+    if (!is.na(xml_attr(entries[1], 'nowplaying'))) {
+      entries <- entries[2:length(entries)]
+    }
     dates <- as.integer(xml_attr(xml_find_all(entries, './/date'), 'uts'))
     artists <- xml_text(xml_find_all(entries, './/artist'))
     tracks <- xml_text(xml_find_all(entries, './/name'))
@@ -76,12 +81,17 @@ get_scrobbles <- function(user) {
   scrobbles <- scrobbles[!empty_rows,]
 
   #handle missing values
-  scrobbles[date == 0, date := NA_integer_]
+  #assumes anything before 2000-01-01 to be error
+  scrobbles[date < 946684800, date := NA_integer_]
   scrobbles[grepl("^\\s*$", album), album := NA_character_]
 
   #date formatting
+  #last.fm returns GMT, this need to be set first, then optionally convertred
   class(scrobbles$date) <- c("POSIXt", "POSIXct")
   attr(scrobbles$date, "tzone") <- "GMT"
+  if (timezone != 'GMT') {
+    attr(scrobbles$date, "tzone") <- timezone
+  }
 
   close(pb)
   return(scrobbles)

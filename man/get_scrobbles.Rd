@@ -4,10 +4,13 @@
 \alias{get_scrobbles}
 \title{Get all scroblles for a given user}
 \usage{
-get_scrobbles(user)
+get_scrobbles(user, timezone = "GMT")
 }
 \arguments{
 \item{user}{Last.fm username}
+
+\item{timezone}{(optional) defaults to GMT.
+Pass any timezone name as in \code{OlsonNames()} if you need to convert}
 }
 \value{
 \code{data.table} object with columns: date, track, artist, album
