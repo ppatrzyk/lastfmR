@@ -59,3 +59,20 @@ artist_info <- get_library_info(user = "grinder91")
 4:   The Deep Wave              1              180              905               new wave; post-punk; retrowave; synthwave
 5: Psychoformalina            621              739            13435      zimna fala; post-punk; cold wave; coldwave; polish
 ```
+
+### get_tags
+
+Get all tags and their frequencies for specified artists. Example:
+
+```R
+tags <- get_tags(artist_vector = 'Manowar')
+> head(tags, 5)
+    artist         tag tag_freq
+1: Manowar heavy metal      100
+2: Manowar Power metal       49
+3: Manowar       metal       35
+4: Manowar  true metal       28
+5: Manowar  epic metal       21
+```
+
+Note that last.fm returns tag frequencies on a normalized scale (1-100). These are not absolute counts (AFAIK).

@@ -3,3 +3,4 @@
 export(get_artist_info)
 export(get_library_info)
 export(get_scrobbles)
+export(get_tags)
