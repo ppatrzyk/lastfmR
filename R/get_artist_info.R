@@ -47,6 +47,11 @@ get_artist_info <- function(artist_vector){
         page_index,
         `:=`(artist_tags = tags, global_listeners = listeners, global_scrobbles = scrobbles)
         ]
+    }else{
+      warning(sprintf(
+        "Artist %s not found, NA values returned.",
+        artist_info[page_index, artist]
+      ))
     }
     setTxtProgressBar(pb, getTxtProgressBar(pb) + 1L)
   }

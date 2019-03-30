@@ -4,10 +4,13 @@
 \alias{get_library_info}
 \title{Get info about all artists from a user's library}
 \usage{
-get_library_info(user)
+get_library_info(user, user_scrobbles_only = FALSE)
 }
 \arguments{
 \item{user}{Last.fm username}
+
+\item{user_scrobbles_only}{defaults to \code{FALSE}. Set to \code{TRUE}
+if you only need user scrobbles (function return faster)}
 }
 \value{
 \code{data.table} object with columns: artist, artist_tag, global_listners, global_scrobbles

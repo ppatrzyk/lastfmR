@@ -30,15 +30,19 @@ get_tags <- function(artist_vector) {
   pb <- txtProgressBar(min = 0, max = total, style = 3)
   add_data <- function(response){
     dt_index <- which(lastfm_urls == response$url)
+    current_artist = artist_vector[dt_index]
     parsed_xml <- read_xml(parse_content(response))
     entries <- xml_find_all(parsed_xml, ".//tag")
     tags <- xml_text(xml_find_all(entries, './/name'))
     counts <- as.integer(xml_text(xml_find_all(entries, './/count')))
     tags_dt <- data.table(
-      artist = rep(artist_vector[dt_index], length(tags)),
+      artist = rep(current_artist, length(tags)),
       tag = tags,
       tag_freq = counts
     )
+    if(tags_dt[, .N] == 0){
+      warning(sprintf("Artist %s not found", current_artist))
+    }
     dt_list[[dt_index]] <<- tags_dt
     setTxtProgressBar(pb, getTxtProgressBar(pb) + 1L)
   }

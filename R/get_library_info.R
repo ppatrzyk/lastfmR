@@ -2,6 +2,9 @@
 #'
 #' @param user Last.fm username
 #'
+#' @param user_scrobbles_only defaults to \code{FALSE}. Set to \code{TRUE}
+#' if you only need user scrobbles (function return faster)
+#'
 #' @return \code{data.table} object with columns: artist, artist_tag, global_listners, global_scrobbles
 #'
 #' @examples
@@ -10,7 +13,7 @@
 #' @seealso \code{\link{get_library_info}}
 #'
 #' @export
-get_library_info <- function(user){
+get_library_info <- function(user, user_scrobbles_only = FALSE){
 
   #library
   first_url <- paste0(
@@ -63,6 +66,10 @@ get_library_info <- function(user){
       ]
   }
   run_batch(url_list = lastfm_urls, indices = seq(pages), update_data = add_data)
+
+  if(user_scrobbles_only){
+    return(user_artists)
+  }
 
   artist_info <- get_artist_info(artist_vector = user_artists$artist)
   user_artists <- merge(
