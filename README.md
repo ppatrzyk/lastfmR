@@ -76,3 +76,18 @@ tags <- get_tags(artist_vector = 'Manowar')
 ```
 
 Note that last.fm returns tag frequencies on a normalized scale (1-100). These are not absolute counts (AFAIK).
+
+### get_similar
+
+Get similar artists for a given artist. Example:
+
+```R
+edgelist <- get_similar('Closterkeller')
+# Get also similarity for artist similar to your input (2nd level)
+level2 <- rbindlist(lapply(
+  edgelist[, To], get_similar
+))
+edgelist <- rbindlist(list(edgelist, level2))
+```
+
+The function returns a `data.table` formatted as edgelist, which is handy if you want to analyze it as graph (either in *R* or other software such as *Gephi*.

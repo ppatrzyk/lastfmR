@@ -1,6 +1,6 @@
 Package: lastfmR
 Title: Get last.fm data into R
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: 
     person(given = "Piotr",
            family = "Patrzyk",
