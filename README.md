@@ -88,6 +88,14 @@ level2 <- rbindlist(lapply(
   edgelist[, To], get_similar
 ))
 edgelist <- rbindlist(list(edgelist, level2))
+> head(edgelist)
+            From             To    match
+1: Closterkeller       Artrosis        1
+2: Closterkeller      Moonlight 0.998498
+3: Closterkeller         O.N.A. 0.630667
+4: Closterkeller Renata Przemyk 0.485797
+5: Closterkeller      Chylińska 0.469014
+6: Closterkeller  XIII. Století 0.402615
 ```
 
-The function returns a `data.table` formatted as edgelist, which is handy if you want to analyze it as graph (either in *R* or other software such as *Gephi*.
+The function returns a `data.table` formatted as edgelist, which is handy if you want to analyze it as a graph (either in *R* or other software such as *Gephi*).
