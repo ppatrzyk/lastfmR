@@ -60,7 +60,7 @@ artist_info <- get_library_info(user = "grinder91")
 5: Psychoformalina            621              739            13435      zimna fala; post-punk; cold wave; coldwave; polish
 ```
 
-If you only need user_scrobbles, set `user_scrobbles_only = FALSE` in function call, the function will return faster.
+If you only need user_scrobbles, set `user_scrobbles_only = TRUE` in function call, the function will return faster.
 
 ### get_tags
 
@@ -94,7 +94,7 @@ tracks <- get_tracks(artist = 'Siekiera')
 5:  Jest bezpiecznie     10237     49799
 ```
 
-Note that last.fm limits this method to only first 10,000 tracks.
+Note that last.fm limits this method to only first 10000 tracks.
 
 ### get_similar
 
