@@ -60,9 +60,11 @@ artist_info <- get_library_info(user = "grinder91")
 5: Psychoformalina            621              739            13435      zimna fala; post-punk; cold wave; coldwave; polish
 ```
 
+If you only need user_scrobbles, set `user_scrobbles_only = FALSE` in function call, the function will return faster.
+
 ### get_tags
 
-Get all tags and their frequencies for specified artists. Example:
+Get all tags and their frequencies for specified artists (you can pass multiple names). Example:
 
 ```R
 tags <- get_tags(artist_vector = 'Manowar')
@@ -75,7 +77,24 @@ tags <- get_tags(artist_vector = 'Manowar')
 5: Manowar  epic metal       21
 ```
 
-Note that last.fm returns tag frequencies on a normalized scale (1-100). These are not absolute counts (AFAIK).
+Note that last.fm returns tag frequencies on a normalized scale (1-100). These are not absolute counts.
+
+### get_tracks
+
+Get tracks and their listeners and scrobbles for a specified artist. Example:
+
+```R
+tracks <- get_tracks(artist = 'Siekiera')
+> head(tracks, 5)
+               track listeners scrobbles
+1:  Nowa Aleksandria     19617    121351
+2:    Ludzie wschodu     17710    105302
+3: Idziemy przez las     15468     82805
+4:  Idziemy na skraj     12944     67068
+5:  Jest bezpiecznie     10237     49799
+```
+
+Note that last.fm limits this method to only first 10,000 tracks.
 
 ### get_similar
 
@@ -98,4 +117,4 @@ edgelist <- rbindlist(list(edgelist, level2))
 6: Closterkeller  XIII. Století 0.402615
 ```
 
-The function returns a `data.table` formatted as edgelist, which is handy if you want to analyze it as a graph (either in *R* or other software such as *Gephi*).
+The function returns a `data.table` formatted as edgelist, which is handy if you want to analyze it as a graph (either in *R* or other software such as *Gephi*). `match` is a number on 0-1 scale indicating artist's similarity (returned directly by last.fm).

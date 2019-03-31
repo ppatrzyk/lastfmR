@@ -45,7 +45,8 @@ get_scrobbles <- function(user, timezone = 'GMT') {
 
   #get XML files
   lastfm_urls <- paste0(
-    "http://ws.audioscrobbler.com/2.0/?method=user.getRecentTracks&user=",
+    api_root,
+    "user.getRecentTracks&user=",
     user,
     "&limit=1000&page=",
     seq(pages),
